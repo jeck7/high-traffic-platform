@@ -1,0 +1,231 @@
+server:
+  port: 8080
+  # Performance optimizations
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 8192
+    accept-count: 100
+    processor-cache: 200
+  # HTTP/2 support
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      # Performance optimizations
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+        pool:
+          max-connections: 500
+          max-idle-time: 15s
+          acquire-timeout: 45000
+      routes:
+        # User Service Routes
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: user-service-circuit-breaker
+                fallbackUri: forward:/fallback/user-service
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+            - name: JwtAuthenticationFilter
+
+        # Travel Service Routes
+        - id: travel-service
+          uri: lb://travel-service
+          predicates:
+            - Path=/api/v1/travels/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: travel-service-circuit-breaker
+                fallbackUri: forward:/fallback/travel-service
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+            - name: JwtAuthenticationFilter
+
+        # Payment Service Routes
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: payment-service-circuit-breaker
+                fallbackUri: forward:/fallback/payment-service
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+            - name: JwtAuthenticationFilter
+
+        # Search Service Routes
+        - id: search-service
+          uri: lb://search-service
+          predicates:
+            - Path=/api/v1/search/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: search-service-circuit-breaker
+                fallbackUri: forward:/fallback/search-service
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 30
+                redis-rate-limiter.burstCapacity: 60
+
+        # Notification Service Routes
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notification-service-circuit-breaker
+                fallbackUri: forward:/fallback/notification-service
+            - name: JwtAuthenticationFilter
+
+        # Analytics Service Routes
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/v1/analytics/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: analytics-service-circuit-breaker
+                fallbackUri: forward:/fallback/analytics-service
+            - name: JwtAuthenticationFilter
+
+  # Redis Configuration with performance optimizations
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 32
+        max-idle: 16
+        min-idle: 8
+        max-wait: 1000ms
+      shutdown-timeout: 100ms
+    # Redis cluster configuration for high availability
+    cluster:
+      nodes: localhost:6379
+      max-redirects: 3
+
+  # Caching configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000 # 5 minutes default
+      cache-null-values: false
+      use-key-prefix: true
+      key-prefix: "travel-platform:"
+
+# Eureka Server Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      user-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+      travel-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+      payment-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+      search-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+      notification-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+      analytics-service-circuit-breaker:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        failure-rate-threshold: 50
+
+# JWT Configuration
+jwt:
+  secret: your-secret-key-here-make-it-very-long-and-secure-in-production
+  expiration: 86400000 # 24 hours
+
+# Multi-tenant Configuration
+tenant:
+  header-name: X-Tenant-ID
+  subdomain-pattern: "{tenant}.travelplatform.com"
+  default-tenant: default
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.travelplatform.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n" 

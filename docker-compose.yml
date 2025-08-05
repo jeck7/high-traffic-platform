@@ -1,0 +1,315 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: travel_postgres
+    environment:
+      POSTGRES_DB: travel_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - travel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: travel_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - travel_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Apache Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: travel_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - travel_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: travel_kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - travel_network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: travel_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - travel_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana (for Elasticsearch management)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    container_name: travel_kibana
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - travel_network
+
+  # Eureka Server (Service Discovery)
+  eureka-server:
+    image: openjdk:17-jdk-slim
+    container_name: travel_eureka
+    ports:
+      - "8761:8761"
+    volumes:
+      - ./backend/eureka-server:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - postgres
+      - redis
+
+  # API Gateway
+  api-gateway:
+    image: openjdk:17-jdk-slim
+    container_name: travel_api_gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/api-gateway:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - redis
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # User Service
+  user-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_user_service
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend/user-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - postgres
+      - redis
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Travel Service
+  travel-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_travel_service
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./backend/travel-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - postgres
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Payment Service
+  payment-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_payment_service
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./backend/payment-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - postgres
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Search Service
+  search-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_search_service
+    ports:
+      - "8084:8084"
+    volumes:
+      - ./backend/search-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - elasticsearch
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Notification Service
+  notification-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_notification_service
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./backend/notification-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Analytics Service
+  analytics-service:
+    image: openjdk:17-jdk-slim
+    container_name: travel_analytics_service
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./backend/analytics-service:/app
+    working_dir: /app
+    command: >
+      sh -c "mvn spring-boot:run"
+    networks:
+      - travel_network
+    depends_on:
+      - eureka-server
+      - postgres
+      - kafka
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: travel_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - travel_network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: travel_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - travel_network
+    depends_on:
+      - prometheus
+
+  # Nginx (Load Balancer)
+  nginx:
+    image: nginx:alpine
+    container_name: travel_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - travel_network
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  travel_network:
+    driver: bridge 

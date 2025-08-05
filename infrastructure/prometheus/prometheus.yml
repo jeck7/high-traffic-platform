@@ -1,0 +1,168 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # User Service
+  - job_name: 'user-service'
+    static_configs:
+      - targets: ['user-service:8081']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Travel Service
+  - job_name: 'travel-service'
+    static_configs:
+      - targets: ['travel-service:8082']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Eureka Server
+  - job_name: 'eureka-server'
+    static_configs:
+      - targets: ['eureka-server:8761']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Kafka
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9092']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Elasticsearch
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    metrics_path: '/_prometheus/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    metrics_path: '/nginx_status'
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Docker containers
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['docker:9323']
+    scrape_interval: 15s
+    scrape_timeout: 5s
+
+  # Custom application metrics
+  - job_name: 'application-metrics'
+    static_configs:
+      - targets: ['api-gateway:8080', 'user-service:8081', 'travel-service:8082']
+    metrics_path: '/actuator/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'http_server_requests_seconds.*'
+        action: keep
+      - source_labels: [__name__]
+        regex: 'hikaricp_connections.*'
+        action: keep
+      - source_labels: [__name__]
+        regex: 'cache_hit_ratio.*'
+        action: keep
+      - source_labels: [__name__]
+        regex: 'jvm_memory_used_bytes.*'
+        action: keep
+
+  # Business metrics
+  - job_name: 'business-metrics'
+    static_configs:
+      - targets: ['user-service:8081', 'travel-service:8082']
+    metrics_path: '/actuator/business-metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'travel_bookings_total.*'
+        action: keep
+      - source_labels: [__name__]
+        regex: 'user_registrations_total.*'
+        action: keep
+      - source_labels: [__name__]
+        regex: 'api_requests_total.*'
+        action: keep
+
+  # Health checks
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: 
+        - 'api-gateway:8080'
+        - 'user-service:8081'
+        - 'travel-service:8082'
+        - 'eureka-server:8761'
+        - 'postgres:5432'
+        - 'redis:6379'
+        - 'kafka:9092'
+        - 'elasticsearch:9200'
+        - 'nginx:80'
+    metrics_path: '/actuator/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'up'
+        action: keep
+
+# Recording rules for performance metrics
+rule_files:
+  - "recording_rules.yml" 

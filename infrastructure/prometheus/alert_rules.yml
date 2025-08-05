@@ -1,0 +1,241 @@
+groups:
+  - name: performance_alerts
+    rules:
+      # High response time alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 100ms for {{ $labels.instance }}"
+
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 0.5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical response time detected"
+          description: "95th percentile response time is above 500ms for {{ $labels.instance }}"
+
+      # Error rate alerts
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 1% for {{ $labels.instance }}"
+
+      - alert: CriticalErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is above 5% for {{ $labels.instance }}"
+
+      # Database performance alerts
+      - alert: HighDatabaseResponseTime
+        expr: histogram_quantile(0.95, rate(hikaricp_connections_acquire_seconds_bucket[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database response time"
+          description: "Database connection acquisition time is above 50ms for {{ $labels.instance }}"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is above 80% for {{ $labels.instance }}"
+
+      # Cache performance alerts
+      - alert: LowCacheHitRate
+        expr: rate(cache_hit_ratio_total[5m]) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 80% for {{ $labels.instance }}"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is above 80%"
+
+      # Memory and CPU alerts
+      - alert: HighMemoryUsage
+        expr: (jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"}) > 0.85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for {{ $labels.instance }}"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for {{ $labels.instance }}"
+
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.instance }} is down"
+
+      - alert: ServiceUnhealthy
+        expr: up == 1 and on(instance) group_left(application) application_health_status{status!="UP"} == 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Service is unhealthy"
+          description: "Service {{ $labels.instance }} is unhealthy"
+
+      # Circuit breaker alerts
+      - alert: CircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{state="OPEN"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Circuit breaker {{ $labels.name }} is open for {{ $labels.instance }}"
+
+      # Rate limiting alerts
+      - alert: RateLimitExceeded
+        expr: rate(rate_limiter_rejected_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limit exceeded"
+          description: "Rate limit is being exceeded for {{ $labels.instance }}"
+
+      # Business metrics alerts
+      - alert: LowBookingRate
+        expr: rate(travel_bookings_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low booking rate"
+          description: "Booking rate is below 1 per minute"
+
+      - alert: HighBookingFailureRate
+        expr: rate(travel_booking_failures_total[5m]) / rate(travel_bookings_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High booking failure rate"
+          description: "Booking failure rate is above 10%"
+
+      # Infrastructure alerts
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10% on {{ $labels.instance }}"
+
+      - alert: NetworkLatencyHigh
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m])) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network latency"
+          description: "Network latency is above 200ms for {{ $labels.instance }}"
+
+      # Kafka alerts
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_group_max_lag > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag"
+          description: "Kafka consumer lag is above 1000 messages"
+
+      - alert: KafkaProducerErrors
+        expr: rate(kafka_producer_record_error_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka producer errors"
+          description: "Kafka producer is experiencing errors"
+
+      # Elasticsearch alerts
+      - alert: ElasticsearchClusterRed
+        expr: elasticsearch_cluster_health_status{status="red"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Elasticsearch cluster is red"
+          description: "Elasticsearch cluster health is red"
+
+      - alert: ElasticsearchClusterYellow
+        expr: elasticsearch_cluster_health_status{status="yellow"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elasticsearch cluster is yellow"
+          description: "Elasticsearch cluster health is yellow"
+
+      # Nginx alerts
+      - alert: NginxHighErrorRate
+        expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) / rate(nginx_http_requests_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nginx high error rate"
+          description: "Nginx error rate is above 1%"
+
+      # Custom business alerts
+      - alert: UserRegistrationSpike
+        expr: rate(user_registrations_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "User registration spike"
+          description: "High user registration rate detected"
+
+      - alert: TravelSearchSpike
+        expr: rate(travel_searches_total[5m]) > 50
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "Travel search spike"
+          description: "High travel search rate detected" 

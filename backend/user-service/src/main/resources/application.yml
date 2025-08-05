@@ -1,0 +1,159 @@
+server:
+  port: 8081
+  # Performance optimizations
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    connection-timeout: 20000
+    max-connections: 8192
+    accept-count: 100
+    processor-cache: 200
+  # HTTP/2 support
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: user-service
+  config:
+    import: "optional:configserver:"
+  
+  # Database Configuration with performance optimizations
+  datasource:
+    url: jdbc:postgresql://travel_postgres:5432/travel_platform_users
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+    # Connection pooling optimizations
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      connection-test-query: SELECT 1
+  
+  # JPA Configuration with performance optimizations
+  jpa:
+    hibernate:
+      ddl-auto: update
+      # Performance optimizations
+      jdbc:
+        batch_size: 50
+        fetch_size: 50
+      order_inserts: true
+      order_updates: true
+      batch_versioned_data: true
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        # Performance optimizations
+        jdbc:
+          batch_size: 50
+          fetch_size: 50
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+        # Connection pool optimizations
+        connection:
+          provider_disables_autocommit: true
+        # Query optimizations
+        default_schema: public
+        # Statistics for monitoring
+        generate_statistics: true
+        # Session management
+        session:
+          events:
+            log: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  
+  # Redis Configuration with performance optimizations
+  redis:
+    host: travel_redis
+    port: 6379
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 32
+        max-idle: 16
+        min-idle: 8
+        max-wait: 1000ms
+      shutdown-timeout: 100ms
+    # Redis cluster configuration
+    cluster:
+      nodes: travel_redis:6379
+      max-redirects: 3
+
+  # Caching configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000 # 5 minutes default
+      cache-null-values: false
+      use-key-prefix: true
+      key-prefix: "user-service:"
+
+  # Async processing configuration
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 16
+        queue-capacity: 100
+        keep-alive: 60s
+
+# Eureka Client Configuration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://travel_eureka_server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# JWT Configuration
+jwt:
+  secret: your-secret-key-here-make-it-very-long-and-secure-in-production
+  expiration: 86400000 # 24 hours
+  refresh-expiration: 604800000 # 7 days
+
+# Multi-tenant Configuration
+tenant:
+  header-name: X-Tenant-ID
+  default-tenant: default
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    com.travelplatform.userservice: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method 
