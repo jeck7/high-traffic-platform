@@ -34,12 +34,23 @@ export const fetchTravelPackages = createAsyncThunk(
   'travel/fetchPackages',
   async (_, { rejectWithValue }) => {
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return travelPackages;
+      // Real API call
+      const response = await fetch('http://localhost:8080/api/v1/travel/packages', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch packages');
+      }
+      const data = await response.json();
+      return data.packages || travelPackages; // fallback to mock if no data
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      // fallback to mock data for dev
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return travelPackages;
     }
   }
 );
@@ -48,18 +59,27 @@ export const fetchTravelPackageById = createAsyncThunk(
   'travel/fetchPackageById',
   async (id: string, { rejectWithValue }) => {
     try {
-      // Find package from our data
+      // Real API call
+      const response = await fetch(`http://localhost:8080/api/v1/travel/packages/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Package not found');
+      }
+      const data = await response.json();
+      return data.package || travelPackages.find(pkg => pkg.id === id);
+    } catch (error: any) {
+      // fallback to mock data
       const packageData = travelPackages.find(pkg => pkg.id === id);
-      
       if (!packageData) {
         throw new Error('Package not found');
       }
-      
       await new Promise(resolve => setTimeout(resolve, 500));
-      
       return packageData;
-    } catch (error: any) {
-      return rejectWithValue(error.message);
     }
   }
 );

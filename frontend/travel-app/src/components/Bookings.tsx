@@ -94,20 +94,38 @@ const Bookings: React.FC = () => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        setError(null);
+        // Real API call
+        let token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:8080/api/v1/users/bookings', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+        const data = await response.json();
+        setBookings(data.bookings || []);
+      } catch (err: any) {
+        // fallback to mock data for dev
         setBookings(mockBookings);
-      } catch (err) {
-        setError('Failed to load bookings');
+        setError('Показват се примерни резервации (mock).');
       } finally {
         setLoading(false);
       }
     };
-
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       fetchBookings();
+    } else {
+      setBookings([]);
+      setLoading(false);
     }
-  }, [isAuthenticated]);
+    // eslint-disable-next-line
+  }, [isAuthenticated, user]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

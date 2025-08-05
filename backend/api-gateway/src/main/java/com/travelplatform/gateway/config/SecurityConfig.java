@@ -14,6 +14,14 @@ public class SecurityConfig {
     public SecurityWebFilterChain filterChain(ServerHttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(request -> {
+                var corsConfig = new org.springframework.web.cors.CorsConfiguration();
+                corsConfig.setAllowedOriginPatterns(java.util.List.of("*"));
+                corsConfig.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                corsConfig.setAllowedHeaders(java.util.List.of("*"));
+                corsConfig.setAllowCredentials(true);
+                return corsConfig;
+            }))
             .authorizeExchange(authz -> authz
                 .anyExchange().permitAll()
             )

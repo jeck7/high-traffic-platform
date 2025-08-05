@@ -12,8 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/users/auth")
 @RequiredArgsConstructor
 @Tag(name = "Authentication", description = "Authentication management APIs")
 public class AuthController {
@@ -85,6 +88,8 @@ public class AuthController {
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("User Service is healthy!");
     }
+
+
 
     private String extractTenantId(HttpServletRequest request) {
         String tenantId = request.getHeader("X-Tenant-ID");

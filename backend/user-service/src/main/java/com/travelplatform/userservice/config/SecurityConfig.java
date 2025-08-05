@@ -34,6 +34,10 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 // Allow health check
                 .requestMatchers("/health").permitAll()
+                // Allow auth endpoints without authentication
+                .requestMatchers("/api/v1/users/auth/**").permitAll()
+                // Allow bookings endpoint without authentication (for development)
+                .requestMatchers("/api/v1/users/bookings").permitAll()
                 // Require authentication for everything else
                 .anyRequest().authenticated()
             )

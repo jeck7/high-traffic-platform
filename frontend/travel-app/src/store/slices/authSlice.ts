@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 // import { authApi } from '../../services/authApi';
+import { RootState } from '../store';
 
 export interface User {
   id: number;
@@ -38,42 +39,42 @@ const initialState: AuthState = {
   tenantId: localStorage.getItem('tenantId'),
 };
 
-// Dummy async thunks to allow build to pass
+// API helper
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+async function apiPost(path: string, data: any) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    credentials: 'include',
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'API error');
+  }
+  return response.json();
+}
+
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { usernameOrEmail: string; password: string; tenantId?: string }, { rejectWithValue }) => {
     try {
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login response
-      const mockUser = {
-        id: 1,
-        username: credentials.usernameOrEmail,
-        email: credentials.usernameOrEmail,
-        firstName: 'John',
-        lastName: 'Doe',
-        fullName: 'John Doe',
-        phoneNumber: '+1234567890',
-        profilePictureUrl: '',
-        isEmailVerified: true,
-        preferredLanguage: 'en',
-        timezone: 'UTC',
-        lastLoginAt: new Date().toISOString(),
-        roles: ['USER'],
-        createdAt: '2024-01-01T00:00:00Z',
+      // Real API call
+      const result = await apiPost('/api/v1/users/auth/login', credentials);
+      return {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        tenantId: result.tenantId || credentials.tenantId || 'default',
       };
-      
-      const mockResponse = {
-        user: mockUser,
-        accessToken: 'mock-access-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now(),
-        tenantId: credentials.tenantId || 'default',
-      };
-      
-      return mockResponse;
     } catch (error: any) {
-      return rejectWithValue('Login failed');
+      // fallback to mock for dev
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      // return mockResponse;
+      return rejectWithValue(error.message || 'Login failed');
     }
   }
 );
@@ -82,37 +83,19 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData: any, { rejectWithValue }) => {
     try {
-      // Simulate API call with delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful registration response
-      const mockUser = {
-        id: 2,
-        username: userData.username,
-        email: userData.email,
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        fullName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
-        phoneNumber: userData.phoneNumber || '',
-        profilePictureUrl: '',
-        isEmailVerified: false,
-        preferredLanguage: 'en',
-        timezone: 'UTC',
-        lastLoginAt: new Date().toISOString(),
-        roles: ['USER'],
-        createdAt: new Date().toISOString(),
+      // Real API call
+      const result = await apiPost('/api/v1/users/auth/register', userData);
+      return {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        tenantId: result.tenantId || 'default',
       };
-      
-      const mockResponse = {
-        user: mockUser,
-        accessToken: 'mock-access-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now(),
-        tenantId: 'default',
-      };
-      
-      return mockResponse;
     } catch (error: any) {
-      return rejectWithValue('Registration failed');
+      // fallback to mock for dev
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+      // return mockResponse;
+      return rejectWithValue(error.message || 'Registration failed');
     }
   }
 );
@@ -145,6 +128,40 @@ export const logout = createAsyncThunk(
   }
 );
 
+export const updateUser = createAsyncThunk(
+  'auth/updateUser',
+  async (userData: Partial<User>, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const token = state.auth.token;
+      
+      if (!token) {
+        throw new Error('No authentication token');
+      }
+
+      const response = await fetch('http://localhost:8080/api/v1/users/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(userData),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Failed to update profile');
+      }
+
+      const result = await response.json();
+      return result.user;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update profile');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -156,11 +173,7 @@ const authSlice = createSlice({
       state.tenantId = action.payload;
       localStorage.setItem('tenantId', action.payload);
     },
-    updateUser: (state, action: PayloadAction<Partial<User>>) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-      }
-    },
+
   },
   extraReducers: (builder) => {
     // Login
@@ -246,8 +259,25 @@ const authSlice = createSlice({
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('tenantId');
       });
+
+    // Update User
+    builder
+      .addCase(updateUser.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateUser.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
+      })
+      .addCase(updateUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
-export const { clearError, setTenantId, updateUser } = authSlice.actions;
+export const { clearError, setTenantId } = authSlice.actions;
 export default authSlice.reducer; 
