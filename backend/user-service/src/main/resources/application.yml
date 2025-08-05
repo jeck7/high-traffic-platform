@@ -73,7 +73,7 @@ spring:
   
   # Redis Configuration with performance optimizations
   redis:
-    host: travel_redis
+    host: redis
     port: 6379
     timeout: 2000ms
     lettuce:
@@ -85,7 +85,7 @@ spring:
       shutdown-timeout: 100ms
     # Redis cluster configuration
     cluster:
-      nodes: travel_redis:6379
+      nodes: redis:6379
       max-redirects: 3
 
   # Caching configuration
@@ -110,7 +110,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://travel_eureka_server:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -146,7 +146,7 @@ management:
 logging:
   level:
     com.travelplatform.userservice: DEBUG
-    org.springframework.security: DEBUG
+    # org.springframework.security: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 

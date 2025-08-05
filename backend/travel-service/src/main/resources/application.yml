@@ -18,6 +18,7 @@ spring:
     name: travel-service
   config:
     import: "optional:configserver:"
+
   
   # Database Configuration with performance optimizations
   datasource:
@@ -106,6 +107,20 @@ spring:
       cache-null-values: false
       use-key-prefix: true
       key-prefix: "travel-service:"
+      host: redis
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
+          max-wait: 1000ms
+        shutdown-timeout: 100ms
+    # Redis cluster configuration
+    cluster:
+      nodes: redis:6379
+      max-redirects: 3
 
   # Async processing configuration
   task:
@@ -120,7 +135,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://travel_eureka_server:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -159,4 +174,6 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
-    operations-sorter: method 
+    operations-sorter: method
+
+ 

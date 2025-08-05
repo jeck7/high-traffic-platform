@@ -7,6 +7,10 @@ spring:
   cloud:
     config:
       enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
 
 # Eureka Server Configuration
 eureka:
@@ -37,4 +41,6 @@ logging:
     com.netflix.eureka: DEBUG
     com.netflix.discovery: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n" 
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+ 

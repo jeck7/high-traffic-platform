@@ -31,6 +31,21 @@ spring:
           max-idle-time: 15s
           acquire-timeout: 45000
       routes:
+        # Swagger UI Routes (without authentication)
+        - id: user-service-swagger
+          uri: lb://user-service
+          predicates:
+            - Path=/user-service/**
+          filters:
+            - StripPrefix=1
+
+        - id: travel-service-swagger
+          uri: lb://travel-service
+          predicates:
+            - Path=/travel-service/**
+          filters:
+            - StripPrefix=1
+
         # User Service Routes
         - id: user-service
           uri: lb://user-service
@@ -41,11 +56,11 @@ spring:
               args:
                 name: user-service-circuit-breaker
                 fallbackUri: forward:/fallback/user-service
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 10
-                redis-rate-limiter.burstCapacity: 20
-            - name: JwtAuthenticationFilter
+                    # - name: RequestRateLimiter
+        #   args:
+        #     redis-rate-limiter.replenishRate: 10
+        #     redis-rate-limiter.burstCapacity: 20
+            # - name: JwtAuthenticationFilter
 
         # Travel Service Routes
         - id: travel-service
@@ -57,11 +72,11 @@ spring:
               args:
                 name: travel-service-circuit-breaker
                 fallbackUri: forward:/fallback/travel-service
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 20
-                redis-rate-limiter.burstCapacity: 40
-            - name: JwtAuthenticationFilter
+                    # - name: RequestRateLimiter
+        #   args:
+        #     redis-rate-limiter.replenishRate: 20
+        #     redis-rate-limiter.burstCapacity: 40
+            # - name: JwtAuthenticationFilter
 
         # Payment Service Routes
         - id: payment-service
@@ -73,11 +88,11 @@ spring:
               args:
                 name: payment-service-circuit-breaker
                 fallbackUri: forward:/fallback/payment-service
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 5
-                redis-rate-limiter.burstCapacity: 10
-            - name: JwtAuthenticationFilter
+                    # - name: RequestRateLimiter
+        #   args:
+        #     redis-rate-limiter.replenishRate: 5
+        #     redis-rate-limiter.burstCapacity: 10
+            # - name: JwtAuthenticationFilter
 
         # Search Service Routes
         - id: search-service
@@ -89,10 +104,10 @@ spring:
               args:
                 name: search-service-circuit-breaker
                 fallbackUri: forward:/fallback/search-service
-            - name: RequestRateLimiter
-              args:
-                redis-rate-limiter.replenishRate: 30
-                redis-rate-limiter.burstCapacity: 60
+                    # - name: RequestRateLimiter
+        #   args:
+        #     redis-rate-limiter.replenishRate: 30
+        #     redis-rate-limiter.burstCapacity: 60
 
         # Notification Service Routes
         - id: notification-service
@@ -104,7 +119,7 @@ spring:
               args:
                 name: notification-service-circuit-breaker
                 fallbackUri: forward:/fallback/notification-service
-            - name: JwtAuthenticationFilter
+            # - name: JwtAuthenticationFilter
 
         # Analytics Service Routes
         - id: analytics-service
@@ -116,39 +131,39 @@ spring:
               args:
                 name: analytics-service-circuit-breaker
                 fallbackUri: forward:/fallback/analytics-service
-            - name: JwtAuthenticationFilter
+            # - name: JwtAuthenticationFilter
 
   # Redis Configuration with performance optimizations
-  redis:
-    host: localhost
-    port: 6379
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 32
-        max-idle: 16
-        min-idle: 8
-        max-wait: 1000ms
-      shutdown-timeout: 100ms
-    # Redis cluster configuration for high availability
-    cluster:
-      nodes: localhost:6379
-      max-redirects: 3
+  # redis:
+  #   host: redis
+  #   port: 6379
+  #   timeout: 2000ms
+  #   lettuce:
+  #     pool:
+  #       max-active: 32
+  #       max-idle: 16
+  #       min-idle: 8
+  #       max-wait: 1000ms
+  #     shutdown-timeout: 100ms
+  #   # Redis cluster configuration for high availability
+  #   cluster:
+  #     nodes: redis:6379
+  #     max-redirects: 3
 
   # Caching configuration
-  cache:
-    type: redis
-    redis:
-      time-to-live: 300000 # 5 minutes default
-      cache-null-values: false
-      use-key-prefix: true
-      key-prefix: "travel-platform:"
+  # cache:
+  #   type: redis
+  #   redis:
+  #     time-to-live: 300000 # 5 minutes default
+  #     cache-null-values: false
+  #     use-key-prefix: true
+  #     key-prefix: "travel-platform:"
 
 # Eureka Server Configuration
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:

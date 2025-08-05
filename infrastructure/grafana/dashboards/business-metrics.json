@@ -1,0 +1,112 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Travel Platform - Business Metrics",
+    "tags": ["travel", "business", "metrics"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "User Registrations",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(user_registrations_total[24h])",
+            "legendFormat": "Registrations (24h)"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Travel Bookings",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(travel_bookings_total[24h])",
+            "legendFormat": "Bookings (24h)"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "API Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "increase(api_requests_total[24h])",
+            "legendFormat": "API Calls (24h)"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users_total",
+            "legendFormat": "Current Active Users"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Booking Conversion Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(travel_bookings_total[5m]) / rate(api_requests_total[5m]) * 100",
+            "legendFormat": "Conversion Rate (%)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 6,
+        "title": "Popular Destinations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(5, sum by (destination) (travel_bookings_total))",
+            "legendFormat": "{{destination}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 7,
+        "title": "Revenue Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(revenue_total[24h])",
+            "legendFormat": "Revenue (24h)"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "User Engagement",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(user_sessions_total[5m])",
+            "legendFormat": "Sessions per Second"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  }
+} 

@@ -186,6 +186,7 @@ high-traffic-platform/
   - Central routing and load balancing
   - Rate limiting and circuit breakers
   - JWT authentication middleware
+  - Service discovery integration
 
 - **User Service**: http://localhost:8081
   - User registration and authentication
@@ -226,8 +227,10 @@ high-traffic-platform/
 ## 📚 API Documentation
 
 ### Swagger UI Endpoints
-- **User Service API**: http://localhost:8081/swagger-ui/index.html
-- **Travel Service API**: http://localhost:8082/swagger-ui/index.html
+- **User Service API (via API Gateway)**: http://localhost:8080/user-service/swagger-ui/index.html
+- **Travel Service API (via API Gateway)**: http://localhost:8080/travel-service/swagger-ui/index.html
+- **User Service API (direct)**: http://localhost:8081/swagger-ui/index.html
+- **Travel Service API (direct)**: http://localhost:8082/swagger-ui/index.html
 
 ### API Features
 - Complete OpenAPI 3.0 specifications
@@ -235,6 +238,21 @@ high-traffic-platform/
 - Request/response examples
 - Authentication documentation
 - Error handling documentation
+- **No authentication required** for Swagger UI access
+
+## 🔧 Service Discovery Status
+
+### ✅ Registered Services
+- **API-GATEWAY**: Status UP (Port 8080)
+- **USER-SERVICE**: Status UP (Port 8081)
+- **TRAVEL-SERVICE**: Status UP (Port 8082)
+
+### 🔗 Service Endpoints
+- **API Gateway Routes**:
+  - User Service: `/api/v1/users/**` → `lb://user-service`
+  - Travel Service: `/api/v1/travels/**` → `lb://travel-service`
+  - Swagger UI: `/user-service/**` → `lb://user-service`
+  - Swagger UI: `/travel-service/**` → `lb://travel-service`
 
 ## 🧪 Test Data
 
@@ -263,11 +281,17 @@ high-traffic-platform/
 - `KAFKA_BOOTSTRAP_SERVERS`: Kafka broker addresses
 - `JWT_SECRET`: JWT signing secret
 
+### Security Configuration
+- **API Gateway**: Security disabled for development (permits all requests)
+- **User Service**: Security disabled for Swagger UI access
+- **Travel Service**: Security disabled for Swagger UI access
+- **Eureka Server**: Security disabled for service registration
+
 ### Performance Optimizations
 - **Database**: Connection pooling, query optimization, indexing
 - **Caching**: Redis for session and data caching
-- **Load Balancing**: Nginx with least connections algorithm
-- **Rate Limiting**: API Gateway rate limiting
+- **Load Balancing**: API Gateway with service discovery
+- **Rate Limiting**: Temporarily disabled for development
 - **Circuit Breakers**: Resilience4j for fault tolerance
 
 ## 📈 Performance Targets
@@ -284,6 +308,7 @@ high-traffic-platform/
 - **Data Protection**: Row-level security (RLS) in PostgreSQL
 - **API Security**: Rate limiting, input validation
 - **Audit Logging**: Complete audit trail
+- **Development Mode**: Security disabled for easier testing
 
 ## 🚀 Deployment
 
@@ -303,6 +328,30 @@ npm start
 # Build and deploy with Docker
 docker-compose -f docker-compose.prod.yml up -d
 ```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+1. **Service not registering in Eureka**:
+   - Check Eureka server is running: http://localhost:8761
+   - Verify service configuration in application.yml
+   - Check Docker network connectivity
+
+2. **API Gateway routing issues**:
+   - Verify services are registered in Eureka
+   - Check API Gateway routes configuration
+   - Test direct service endpoints
+
+3. **Swagger UI not accessible**:
+   - Ensure SecurityConfig is properly configured
+   - Check service is running and healthy
+   - Verify URL paths are correct
+
+### Health Checks
+- **API Gateway**: http://localhost:8080/actuator/health
+- **User Service**: http://localhost:8081/actuator/health
+- **Travel Service**: http://localhost:8082/actuator/health
+- **Eureka Server**: http://localhost:8761
 
 ## 🤝 Contributing
 
@@ -325,4 +374,6 @@ For support and questions:
 
 ---
 
-**Built with ❤️ using Spring Boot, React, and modern web technologies** 
+**Built with ❤️ using Spring Boot, React, and modern web technologies**
+
+**Last Updated**: August 2025 - All services operational with service discovery and API Gateway routing working correctly. 
