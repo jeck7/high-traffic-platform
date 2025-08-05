@@ -7,6 +7,7 @@ import { store } from './store/store';
 import Navigation from './components/Navigation';
 import Home from './components/Home';
 import TravelPackages from './components/TravelPackages';
+import Bookings from './components/Bookings';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import UserProfile from './components/auth/UserProfile';
@@ -34,6 +35,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/packages" element={<TravelPackages />} />
+                <Route path="/bookings" element={<Bookings />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/profile" element={<UserProfile />} />
